@@ -67,4 +67,32 @@ class GithubRepositoryIntegrationTest {
         assertEquals(100, result.stars());
         assertEquals("2011-01-26T19:01:12Z", result.createdAt());
     }
+
+    @Test
+    void updateRepository_RepositoryExists_RepositoryUpdatedInDatabase() {
+        String owner = "octocat";
+        String repositoryName = "Hello-World";
+        RepositoryEntity entity = new RepositoryEntity(null, "octocat/Hello-World", "Old description",
+                "https://github.com/octocat/Hello-World.git", 100, "2011-01-26T19:01:12Z");
+        repositoryRepository.save(entity);
+        GithubRepositoryResponse githubResponse = new GithubRepositoryResponse("octocat/Hello-World", "Updated description",
+                "https://github.com/octocat/Hello-World.git", 200, "2011-01-26T19:01:12Z");
+        when(githubClient.getRepository(owner, repositoryName)).thenReturn(githubResponse);
+        githubRepositoryService.updateRepository(owner, repositoryName);
+        RepositoryEntity updatedRepository = repositoryRepository.findByFullName("octocat/Hello-World").orElseThrow();
+        assertEquals("octocat/Hello-World", updatedRepository.getFullName());
+        assertEquals("Updated description", updatedRepository.getDescription());
+        assertEquals(200, updatedRepository.getStars());
+        assertEquals("https://github.com/octocat/Hello-World.git", updatedRepository.getCloneUrl());
+        assertEquals("2011-01-26T19:01:12Z", updatedRepository.getCreatedAt());
+    }
+
+    @Test
+    void deleteRepository_RepositoryExists_RepositoryDeletedFromDatabase() {
+        RepositoryEntity entity = new RepositoryEntity(null, "octocat/Hello-World", "Description",
+                "https://github.com/octocat/Hello-World.git", 100, "2011-01-26T19:01:12Z");
+        repositoryRepository.save(entity);
+        githubRepositoryService.deleteRepository("octocat", "Hello-World");
+        assertEquals(0, repositoryRepository.count());
+    }
 }

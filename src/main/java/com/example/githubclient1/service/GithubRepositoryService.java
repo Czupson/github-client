@@ -53,4 +53,33 @@ public class GithubRepositoryService {
                 .orElseThrow(() -> new RepositoryNotFoundException("Repository " + fullName + " not found locally"));
         return githubRepositoryMapper.mapToResponse(entity);
     }
+
+    public void updateRepository(String owner, String repo) {
+        String fullName = owner + "/" + repo;
+        log.info("Updating local repository: {}", fullName);
+        RepositoryEntity entity = repositoryRepository.findByFullName(fullName)
+                .orElseThrow(() -> new RepositoryNotFoundException("Repository " + fullName + " not found locally"));
+        try {
+            GithubRepositoryResponse githubRepository = githubClient.getRepository(owner, repo);
+            entity.setFullName(githubRepository.fullName());
+            entity.setDescription(githubRepository.description());
+            entity.setCloneUrl(githubRepository.cloneUrl());
+            entity.setStars(githubRepository.stars());
+            entity.setCreatedAt(githubRepository.createdAt());
+            repositoryRepository.save(entity);
+            log.info("Repository updated successfully: {}", fullName);
+        } catch (FeignException.NotFound exception) {
+            log.warn("GitHub repository not found: {}", fullName);
+            throw new RepositoryNotFoundException("Repository " + fullName + " not found on GitHub");
+        }
+    }
+
+    public void deleteRepository(String owner, String repo) {
+        String fullName = owner + "/" + repo;
+        log.info("Deleting local repository: {}", fullName);
+        RepositoryEntity entity = repositoryRepository.findByFullName(fullName)
+                .orElseThrow(() -> new RepositoryNotFoundException("Repository " + fullName + " not found locally"));
+        repositoryRepository.delete(entity);
+        log.info("Repository deleted successfully: {}", fullName);
+    }
 }

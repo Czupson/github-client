@@ -9,10 +9,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -95,5 +93,44 @@ class GithubControllerTest {
         mockMvc.perform(get("/local/repositories/{owner}/{repo}", owner, repositoryName))
                 .andExpect(status().isNotFound());
         verify(githubRepositoryService).getLocalRepository(owner, repositoryName);
+    }
+
+    @Test
+    void updateRepository_RepositoryExists_NoContentReturned() throws Exception {
+        String owner = "octocat";
+        String repositoryName = "Hello-World";
+        mockMvc.perform(put("/repositories/{owner}/{repo}", owner, repositoryName))
+                .andExpect(status().isNoContent());
+        verify(githubRepositoryService).updateRepository(owner, repositoryName);
+    }
+
+    @Test
+    void updateRepository_RepositoryDoesNotExist_NotFoundReturned() throws Exception {
+        String owner = "octocat";
+        String repositoryName = "NotExistingRepository";
+        doThrow(new RepositoryNotFoundException("Repository not found")).when(githubRepositoryService).updateRepository(owner, repositoryName);
+        mockMvc.perform(put("/repositories/{owner}/{repo}", owner, repositoryName))
+                .andExpect(status().isNotFound());
+        verify(githubRepositoryService).updateRepository(owner, repositoryName);
+    }
+
+    @Test
+    void deleteRepository_RepositoryExists_NoContentReturned() throws Exception {
+        String owner = "octocat";
+        String repositoryName = "Hello-World";
+        mockMvc.perform(delete("/repositories/{owner}/{repo}", owner, repositoryName))
+                .andExpect(status().isNoContent());
+        verify(githubRepositoryService).deleteRepository(owner, repositoryName);
+    }
+
+    @Test
+    void deleteRepository_RepositoryDoesNotExist_NotFoundReturned() throws Exception {
+        String owner = "octocat";
+        String repositoryName = "NotExistingRepository";
+        doThrow(new RepositoryNotFoundException("Repository not found")).when(githubRepositoryService)
+                .deleteRepository(owner, repositoryName);
+        mockMvc.perform(delete("/repositories/{owner}/{repo}", owner, repositoryName))
+                .andExpect(status().isNotFound());
+        verify(githubRepositoryService).deleteRepository(owner, repositoryName);
     }
 }

@@ -126,4 +126,74 @@ class GithubRepositoryServiceTest {
         verify(githubClient).getRepository(owner, repositoryName);
         verifyNoInteractions(repositoryRepository);
     }
+
+    @Test
+    void updateRepository_RepositoryExists_RepositoryUpdated() {
+        String owner = "octocat";
+        String repositoryName = "Hello-World";
+        RepositoryEntity entity = new RepositoryEntity(1L, "octocat/Hello-World", "Old description",
+                "https://github.com/octocat/Hello-World.git", 100, "2011-01-26T19:01:12Z");
+        GithubRepositoryResponse githubResponse = new GithubRepositoryResponse("octocat/Hello-World",
+                "Updated description", "https://github.com/octocat/Hello-World.git", 200,
+                "2011-01-26T19:01:12Z");
+        when(repositoryRepository.findByFullName("octocat/Hello-World")).thenReturn(Optional.of(entity));
+        when(githubClient.getRepository(owner, repositoryName)).thenReturn(githubResponse);
+        service.updateRepository(owner, repositoryName);
+        assertEquals("octocat/Hello-World", entity.getFullName());
+        assertEquals("Updated description", entity.getDescription());
+        assertEquals("https://github.com/octocat/Hello-World.git", entity.getCloneUrl());
+        assertEquals(200, entity.getStars());
+        assertEquals("2011-01-26T19:01:12Z", entity.getCreatedAt());
+        verify(repositoryRepository).save(entity);
+        verify(githubClient).getRepository(owner, repositoryName);
+    }
+
+    @Test
+    void updateRepository_RepositoryDoesNotExist_RepositoryNotFoundExceptionThrown() {
+        String owner = "octocat";
+        String repositoryName = "NotExistingRepository";
+        when(repositoryRepository.findByFullName("octocat/NotExistingRepository")).thenReturn(Optional.empty());
+        assertThrows(RepositoryNotFoundException.class,
+                () -> service.updateRepository(owner, repositoryName));
+        verify(repositoryRepository).findByFullName("octocat/NotExistingRepository");
+        verifyNoInteractions(githubClient);
+    }
+
+    @Test
+    void updateRepository_RepositoryNotFoundOnGithub_RepositoryNotFoundExceptionThrown() {
+        String owner = "octocat";
+        String repositoryName = "NotExistingRepository";
+        RepositoryEntity entity = new RepositoryEntity(1L, "octocat/NotExistingRepository", "Old description",
+                "https://github.com/octocat/NotExistingRepository.git", 100, "2011-01-26T19:01:12Z");
+        when(repositoryRepository.findByFullName("octocat/NotExistingRepository")).thenReturn(Optional.of(entity));
+        when(githubClient.getRepository(owner, repositoryName)).thenThrow(FeignException.NotFound.class);
+        assertThrows(RepositoryNotFoundException.class,
+                () -> service.updateRepository(owner, repositoryName));
+        verify(repositoryRepository).findByFullName("octocat/NotExistingRepository");
+        verify(githubClient).getRepository(owner, repositoryName);
+        verify(repositoryRepository, never()).save(entity);
+    }
+
+    @Test
+    void deleteRepository_RepositoryExists_RepositoryDeleted() {
+        String owner = "octocat";
+        String repositoryName = "Hello-World";
+        RepositoryEntity entity = new RepositoryEntity(1L, "octocat/Hello-World", "Description",
+                "https://github.com/octocat/Hello-World.git", 100, "2011-01-26T19:01:12Z");
+        when(repositoryRepository.findByFullName("octocat/Hello-World")).thenReturn(Optional.of(entity));
+        service.deleteRepository(owner, repositoryName);
+        verify(repositoryRepository).findByFullName("octocat/Hello-World");
+        verify(repositoryRepository).delete(entity);
+    }
+
+    @Test
+    void deleteRepository_RepositoryDoesNotExist_RepositoryNotFoundExceptionThrown() {
+        String owner = "octocat";
+        String repositoryName = "NotExistingRepository";
+        when(repositoryRepository.findByFullName("octocat/NotExistingRepository")).thenReturn(Optional.empty());
+        assertThrows(RepositoryNotFoundException.class,
+                () -> service.deleteRepository(owner, repositoryName));
+        verify(repositoryRepository).findByFullName("octocat/NotExistingRepository");
+        verify(repositoryRepository, never()).delete(any());
+    }
 }

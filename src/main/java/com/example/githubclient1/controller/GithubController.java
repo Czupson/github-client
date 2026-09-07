@@ -42,4 +42,24 @@ public class GithubController {
         log.info("Local repository returned successfully: {}/{}", owner, repo);
         return response;
     }
+
+    @PutMapping("/repositories/{owner}/{repo}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateRepository(
+            @PathVariable("owner") String owner,
+            @PathVariable("repo") String repo) {
+        log.info("Received request to update repository: {}/{}", owner, repo);
+        githubRepositoryService.updateRepository(owner, repo);
+        log.info("Repository updated successfully: {}/{}", owner, repo);
+    }
+
+    @DeleteMapping("/repositories/{owner}/{repo}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteRepository(
+            @PathVariable("owner") String owner,
+            @PathVariable("repo") String repo) {
+        log.info("Received request to delete repository: {}/{}", owner, repo);
+        githubRepositoryService.deleteRepository(owner, repo);
+        log.info("Repository deleted successfully: {}/{}", owner, repo);
+    }
 }
