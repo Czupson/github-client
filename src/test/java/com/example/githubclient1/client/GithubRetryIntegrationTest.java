@@ -63,10 +63,10 @@ class GithubRetryIntegrationTest {
         // Given
         wireMockServer.stubFor(get(urlEqualTo("/repos/octocat/Hello-World")).willReturn(aResponse().withStatus(503)));
         // When
-        Exception exception = assertThrows(RetryableException.class,
-                () -> githubClient.getRepository("octocat", "Hello-World"));
+        GithubRepositoryResponse response = githubClient.getRepository("octocat", "Hello-World");
         // Then
-        assertEquals(503, ((RetryableException) exception).status());
+        assertEquals("octocat/Hello-World", response.fullName());
+        assertEquals("Fallback response", response.description());
         verify(3, getRequestedFor(urlEqualTo("/repos/octocat/Hello-World")));
     }
 
@@ -75,9 +75,25 @@ class GithubRetryIntegrationTest {
         // Given
         wireMockServer.stubFor(get(urlEqualTo("/repos/octocat/NotExistingRepository")).willReturn(aResponse().withStatus(404)));
         // When
-        Exception exception = assertThrows(FeignException.NotFound.class,
-                () -> githubClient.getRepository("octocat", "NotExistingRepository"));
+        GithubRepositoryResponse response = githubClient.getRepository("octocat", "NotExistingRepository");
         // Then
+        assertEquals("octocat/NotExistingRepository", response.fullName());
+        assertEquals("Fallback response", response.description());
         verify(1, getRequestedFor(urlEqualTo("/repos/octocat/NotExistingRepository")));
+    }
+
+    @Test
+    void getRepository_WhenGitHubReturns500_UsesFallback() {
+        // Given
+        wireMockServer.stubFor(get(urlEqualTo("/repos/octocat/Hello-World")).willReturn(aResponse().withStatus(500)));
+        // When
+        GithubRepositoryResponse response = githubClient.getRepository("octocat", "Hello-World");
+        // Then
+        assertEquals("octocat/Hello-World", response.fullName());
+        assertEquals("Fallback response", response.description());
+        assertEquals("", response.cloneUrl());
+        assertEquals(0, response.stars());
+        assertEquals("", response.createdAt());
+        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/repos/octocat/Hello-World")));
     }
 }

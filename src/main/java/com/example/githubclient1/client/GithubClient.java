@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(
         name = "githubClient",
         url = "${github.api.url:https://api.github.com}",
-        configuration = GithubFeignConfig.class)
+        configuration = GithubFeignConfig.class,
+        fallbackFactory = GithubClientFallbackFactory.class)
 public interface GithubClient {
     @GetMapping("/repos/{owner}/{repo}")
     GithubRepositoryResponse getRepository(
