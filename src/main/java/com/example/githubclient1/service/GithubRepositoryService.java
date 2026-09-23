@@ -10,6 +10,7 @@ import com.example.githubclient1.repository.RepositoryRepository;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -23,8 +24,8 @@ public class GithubRepositoryService {
     public RepositoryResponse getRepository(String owner, String repo) {
         log.info("Fetching GitHub repository: {}/{}", owner, repo);
         try {
-            GithubRepositoryResponse githubRepository =
-                    githubClient.getRepository(owner, repo);
+            String traceId = MDC.get("trace-id");
+            GithubRepositoryResponse githubRepository = githubClient.getRepository(traceId, owner, repo);
             log.info("GitHub repository fetched successfully: {}/{}", owner, repo);
             return githubRepositoryMapper.map(githubRepository);
         } catch (FeignException.NotFound exception) {
@@ -36,8 +37,11 @@ public class GithubRepositoryService {
     public void saveRepository(String owner, String repo) {
         log.info("Fetching repository from GitHub for local save: {}/{}", owner, repo);
         try {
-            GithubRepositoryResponse githubRepository = githubClient.getRepository(owner, repo);
+            String traceId = MDC.get("trace-id");
+            GithubRepositoryResponse githubRepository = githubClient.getRepository(traceId, owner, repo);
+            log.info("Repository data received: {}", githubRepository);
             RepositoryEntity entity = githubRepositoryMapper.mapToEntity(githubRepository);
+            entity.setFullName(entity.getFullName().toLowerCase());
             repositoryRepository.save(entity);
             log.info("Repository saved locally: {}/{}", owner, repo);
         } catch (FeignException.NotFound exception) {
@@ -47,7 +51,7 @@ public class GithubRepositoryService {
     }
 
     public RepositoryResponse getLocalRepository(String owner, String repo) {
-        String fullName = owner + "/" + repo;
+        String fullName = owner.toLowerCase() + "/" + repo;
         log.info("Fetching repository from local database: {}", fullName);
         RepositoryEntity entity = repositoryRepository.findByFullName(fullName)
                 .orElseThrow(() -> new RepositoryNotFoundException("Repository " + fullName + " not found locally"));
@@ -55,12 +59,13 @@ public class GithubRepositoryService {
     }
 
     public void updateRepository(String owner, String repo) {
-        String fullName = owner + "/" + repo;
+        String fullName = owner.toLowerCase() + "/" + repo;
         log.info("Updating local repository: {}", fullName);
         RepositoryEntity entity = repositoryRepository.findByFullName(fullName)
                 .orElseThrow(() -> new RepositoryNotFoundException("Repository " + fullName + " not found locally"));
         try {
-            GithubRepositoryResponse githubRepository = githubClient.getRepository(owner, repo);
+            String traceId = MDC.get("trace-id");
+            GithubRepositoryResponse githubRepository = githubClient.getRepository(traceId, owner, repo);
             entity.setFullName(githubRepository.fullName());
             entity.setDescription(githubRepository.description());
             entity.setCloneUrl(githubRepository.cloneUrl());
@@ -75,7 +80,7 @@ public class GithubRepositoryService {
     }
 
     public void deleteRepository(String owner, String repo) {
-        String fullName = owner + "/" + repo;
+        String fullName = owner.toLowerCase() + "/" + repo;
         log.info("Deleting local repository: {}", fullName);
         RepositoryEntity entity = repositoryRepository.findByFullName(fullName)
                 .orElseThrow(() -> new RepositoryNotFoundException("Repository " + fullName + " not found locally"));

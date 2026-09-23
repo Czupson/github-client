@@ -5,6 +5,7 @@ import com.example.githubclient1.dto.GithubRepositoryResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 @FeignClient(
         name = "githubClient",
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface GithubClient {
     @GetMapping("/repos/{owner}/{repo}")
     GithubRepositoryResponse getRepository(
+            @RequestHeader("trace-id") String traceId,
             @PathVariable String owner,
             @PathVariable String repo);
 }

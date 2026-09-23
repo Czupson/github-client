@@ -5,8 +5,10 @@ import com.example.githubclient1.dto.GithubRepositoryResponse;
 import com.example.githubclient1.entity.RepositoryEntity;
 import com.example.githubclient1.repository.RepositoryRepository;
 import com.example.githubclient1.service.GithubRepositoryService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -28,8 +30,14 @@ class GithubRepositoryIntegrationTest {
     private GithubClient githubClient;
 
     @BeforeEach
-    void cleanDatabase() {
+    void setUp() {
         repositoryRepository.deleteAll();
+        MDC.put("trace-id", "test-trace-id");
+    }
+
+    @AfterEach
+    void tearDown() {
+        MDC.remove("trace-id");
     }
 
     @Test
@@ -39,13 +47,13 @@ class GithubRepositoryIntegrationTest {
         String repositoryName = "Hello-World";
         GithubRepositoryResponse githubResponse = new GithubRepositoryResponse("octocat/Hello-World", "This your first repo!",
                 "https://github.com/octocat/Hello-World.git", 100, "2011-01-26T19:01:12Z");
-        when(githubClient.getRepository(owner, repositoryName)).thenReturn(githubResponse);
+        when(githubClient.getRepository("test-trace-id", owner, repositoryName)).thenReturn(githubResponse);
         // When
         githubRepositoryService.saveRepository(owner, repositoryName);
         // Then
-        RepositoryEntity savedRepository = repositoryRepository.findByFullName("octocat/Hello-World").orElseThrow();
+        RepositoryEntity savedRepository = repositoryRepository.findByFullName("octocat/hello-world").orElseThrow();
         assertNotNull(savedRepository.getId());
-        assertEquals("octocat/Hello-World", savedRepository.getFullName());
+        assertEquals("octocat/hello-world", savedRepository.getFullName());
         assertEquals("This your first repo!", savedRepository.getDescription());
         assertEquals("https://github.com/octocat/Hello-World.git", savedRepository.getCloneUrl());
         assertEquals(100, savedRepository.getStars());
@@ -77,7 +85,7 @@ class GithubRepositoryIntegrationTest {
         repositoryRepository.save(entity);
         GithubRepositoryResponse githubResponse = new GithubRepositoryResponse("octocat/Hello-World", "Updated description",
                 "https://github.com/octocat/Hello-World.git", 200, "2011-01-26T19:01:12Z");
-        when(githubClient.getRepository(owner, repositoryName)).thenReturn(githubResponse);
+        when(githubClient.getRepository("test-trace-id", owner, repositoryName)).thenReturn(githubResponse);
         githubRepositoryService.updateRepository(owner, repositoryName);
         RepositoryEntity updatedRepository = repositoryRepository.findByFullName("octocat/Hello-World").orElseThrow();
         assertEquals("octocat/Hello-World", updatedRepository.getFullName());

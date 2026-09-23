@@ -6,9 +6,13 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import feign.FeignException;
 import feign.RetryableException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.wiremock.spring.ConfigureWireMock;
 import org.wiremock.spring.EnableWireMock;
 import org.wiremock.spring.InjectWireMock;
@@ -19,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest(properties = "github.api.url=http://localhost:8181")
 @EnableWireMock(@ConfigureWireMock(port = 8181))
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class GithubRetryIntegrationTest {
 
     @Autowired
@@ -26,6 +31,16 @@ class GithubRetryIntegrationTest {
 
     @InjectWireMock
     private WireMockServer wireMockServer;
+
+    @BeforeEach
+    void setUp() {
+        MDC.put("trace-id", "test-trace-id");
+    }
+
+    @AfterEach
+    void tearDown() {
+        MDC.remove("trace-id");
+    }
 
     @Test
     void getRepository_WhenGitHubReturns503Then200_RetriesRequest() throws Exception {
@@ -51,7 +66,7 @@ class GithubRetryIntegrationTest {
                         .willReturn(aResponse().withStatus(200)
                                 .withHeader("Content-Type", "application/json").withBody(responseBody)));
         // When
-        GithubRepositoryResponse response = githubClient.getRepository("octocat", "Hello-World");
+        GithubRepositoryResponse response = githubClient.getRepository("test-trace-id", "octocat", "Hello-World");
         // Then
         assertEquals("octocat/Hello-World", response.fullName());
         verify(3, getRequestedFor(urlEqualTo("/repos/octocat/Hello-World"))
@@ -63,7 +78,7 @@ class GithubRetryIntegrationTest {
         // Given
         wireMockServer.stubFor(get(urlEqualTo("/repos/octocat/Hello-World")).willReturn(aResponse().withStatus(503)));
         // When
-        GithubRepositoryResponse response = githubClient.getRepository("octocat", "Hello-World");
+        GithubRepositoryResponse response = githubClient.getRepository("test-trace-id", "octocat", "Hello-World");
         // Then
         assertEquals("octocat/Hello-World", response.fullName());
         assertEquals("Fallback response", response.description());
@@ -75,7 +90,7 @@ class GithubRetryIntegrationTest {
         // Given
         wireMockServer.stubFor(get(urlEqualTo("/repos/octocat/NotExistingRepository")).willReturn(aResponse().withStatus(404)));
         // When
-        GithubRepositoryResponse response = githubClient.getRepository("octocat", "NotExistingRepository");
+        GithubRepositoryResponse response = githubClient.getRepository("test-trace-id", "octocat", "NotExistingRepository");
         // Then
         assertEquals("octocat/NotExistingRepository", response.fullName());
         assertEquals("Fallback response", response.description());
@@ -87,7 +102,7 @@ class GithubRetryIntegrationTest {
         // Given
         wireMockServer.stubFor(get(urlEqualTo("/repos/octocat/Hello-World")).willReturn(aResponse().withStatus(500)));
         // When
-        GithubRepositoryResponse response = githubClient.getRepository("octocat", "Hello-World");
+        GithubRepositoryResponse response = githubClient.getRepository("test-trace-id", "octocat", "Hello-World");
         // Then
         assertEquals("octocat/Hello-World", response.fullName());
         assertEquals("Fallback response", response.description());

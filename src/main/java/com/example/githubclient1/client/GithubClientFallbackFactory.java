@@ -9,7 +9,13 @@ public class GithubClientFallbackFactory implements FallbackFactory<GithubClient
 
     @Override
     public GithubClient create(Throwable cause) {
-        return (owner, repo) ->
-                new GithubRepositoryResponse(owner + "/" + repo, "Fallback response", "", 0, "");
+        return (traceId, owner, repo) ->
+                new GithubRepositoryResponse(
+                        owner + "/" + repo,
+                        "Fallback response",
+                        "",
+                        0,
+                        ""
+                );
     }
 }

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 
 import java.util.Optional;
 
@@ -34,6 +35,7 @@ class GithubRepositoryServiceTest {
         this.githubClient = mock(GithubClient.class);
         this.githubRepositoryMapper = Mappers.getMapper(GithubRepositoryMapper.class);
         this.service = new GithubRepositoryService(githubClient, githubRepositoryMapper, repositoryRepository);
+        MDC.put("trace-id", "test-trace-id");
     }
 
     @Test
@@ -43,7 +45,7 @@ class GithubRepositoryServiceTest {
         String repositoryName = "Hello-World";
         GithubRepositoryResponse response = new GithubRepositoryResponse("octocat/Hello-World", "This your first repo!",
                 "https://github.com/octocat/Hello-World.git", 100, "2011-01-26T19:01:12Z");
-        when(githubClient.getRepository(owner, repositoryName)).thenReturn(response);
+        when(githubClient.getRepository("test-trace-id", owner, repositoryName)).thenReturn(response);
         // When
         RepositoryResponse result = service.getRepository(owner, repositoryName);
         // Then
@@ -53,7 +55,7 @@ class GithubRepositoryServiceTest {
                 () -> assertEquals("https://github.com/octocat/Hello-World.git", result.cloneUrl()),
                 () -> assertEquals(100, result.stars()),
                 () -> assertEquals("2011-01-26T19:01:12Z", result.createdAt()));
-        verify(githubClient).getRepository(owner, repositoryName);
+        verify(githubClient).getRepository("test-trace-id", owner, repositoryName);
     }
 
     @Test
@@ -61,11 +63,11 @@ class GithubRepositoryServiceTest {
         // Given
         String owner = "octocat";
         String repositoryName = "NotExistingRepository";
-        when(githubClient.getRepository(owner, repositoryName)).thenThrow(FeignException.NotFound.class);
+        when(githubClient.getRepository("test-trace-id", owner, repositoryName)).thenThrow(FeignException.NotFound.class);
         // When and Then
         assertThrows(RepositoryNotFoundException.class,
                 () -> service.getRepository(owner, repositoryName));
-        verify(githubClient).getRepository(owner, repositoryName);
+        verify(githubClient).getRepository("test-trace-id", owner, repositoryName);
     }
 
     @Test
@@ -76,11 +78,11 @@ class GithubRepositoryServiceTest {
         GithubRepositoryResponse githubResponse = new GithubRepositoryResponse("octocat/Hello-World", "This your first repo!",
                 "https://github.com/octocat/Hello-World.git",
                 100, "2011-01-26T19:01:12Z");
-        when(githubClient.getRepository(owner, repositoryName)).thenReturn(githubResponse);
+        when(githubClient.getRepository("test-trace-id", owner, repositoryName)).thenReturn(githubResponse);
         // When
         service.saveRepository(owner, repositoryName);
         // Then
-        verify(githubClient).getRepository(owner, repositoryName);
+        verify(githubClient).getRepository("test-trace-id", owner, repositoryName);
         verify(repositoryRepository).save(any());
     }
 
@@ -120,10 +122,10 @@ class GithubRepositoryServiceTest {
     void saveRepository_RepositoryDoesNotExist_RepositoryNotFoundExceptionThrown() {
         String owner = "octocat";
         String repositoryName = "NotExistingRepository";
-        when(githubClient.getRepository(owner, repositoryName)).thenThrow(FeignException.NotFound.class);
+        when(githubClient.getRepository("test-trace-id", owner, repositoryName)).thenThrow(FeignException.NotFound.class);
         assertThrows(RepositoryNotFoundException.class,
                 () -> service.saveRepository(owner, repositoryName));
-        verify(githubClient).getRepository(owner, repositoryName);
+        verify(githubClient).getRepository("test-trace-id", owner, repositoryName);
         verifyNoInteractions(repositoryRepository);
     }
 
@@ -137,7 +139,7 @@ class GithubRepositoryServiceTest {
                 "Updated description", "https://github.com/octocat/Hello-World.git", 200,
                 "2011-01-26T19:01:12Z");
         when(repositoryRepository.findByFullName("octocat/Hello-World")).thenReturn(Optional.of(entity));
-        when(githubClient.getRepository(owner, repositoryName)).thenReturn(githubResponse);
+        when(githubClient.getRepository("test-trace-id", owner, repositoryName)).thenReturn(githubResponse);
         service.updateRepository(owner, repositoryName);
         assertEquals("octocat/Hello-World", entity.getFullName());
         assertEquals("Updated description", entity.getDescription());
@@ -145,7 +147,7 @@ class GithubRepositoryServiceTest {
         assertEquals(200, entity.getStars());
         assertEquals("2011-01-26T19:01:12Z", entity.getCreatedAt());
         verify(repositoryRepository).save(entity);
-        verify(githubClient).getRepository(owner, repositoryName);
+        verify(githubClient).getRepository("test-trace-id", owner, repositoryName);
     }
 
     @Test
@@ -166,11 +168,11 @@ class GithubRepositoryServiceTest {
         RepositoryEntity entity = new RepositoryEntity(1L, "octocat/NotExistingRepository", "Old description",
                 "https://github.com/octocat/NotExistingRepository.git", 100, "2011-01-26T19:01:12Z");
         when(repositoryRepository.findByFullName("octocat/NotExistingRepository")).thenReturn(Optional.of(entity));
-        when(githubClient.getRepository(owner, repositoryName)).thenThrow(FeignException.NotFound.class);
+        when(githubClient.getRepository("test-trace-id", owner, repositoryName)).thenThrow(FeignException.NotFound.class);
         assertThrows(RepositoryNotFoundException.class,
                 () -> service.updateRepository(owner, repositoryName));
         verify(repositoryRepository).findByFullName("octocat/NotExistingRepository");
-        verify(githubClient).getRepository(owner, repositoryName);
+        verify(githubClient).getRepository("test-trace-id", owner, repositoryName);
         verify(repositoryRepository, never()).save(entity);
     }
 
