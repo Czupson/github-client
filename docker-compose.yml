@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: github-client1
+    depends_on:
+      - db
+    environment:
+      LOGSTASH_HOST: medical-logstash
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/githubdb
+      SPRING_DATASOURCE_USERNAME: github
+      SPRING_DATASOURCE_PASSWORD: github123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8082:8080"
+    networks:
+      - elk-network
+  db:
+    image: postgres
+    container_name: github-postgres
+    environment:
+      POSTGRES_DB: githubdb
+      POSTGRES_USER: github
+      POSTGRES_PASSWORD: github123
+    ports:
+      - "5433:5432"
+    networks:
+      - elk-network
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: github-pgadmin
+    depends_on:
+      - db
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@wp.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5051:80"
+    networks:
+      - elk-network
+networks:
+  elk-network:
+    external: true
