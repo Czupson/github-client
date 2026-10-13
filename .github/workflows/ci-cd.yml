@@ -72,7 +72,8 @@ jobs:
           org.owasp:dependency-check-maven:12.1.0:check
           -Dnvd.api.key="$NVD_API_KEY"
           -DossindexAnalyzerEnabled=false
-          -Dformat=HTML,JSON
+          -Dformat=HTML
+          -Dformat=JSON
           -DfailBuildOnCVSS=11
 
       - name: Upload dependency report
