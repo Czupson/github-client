@@ -30,6 +30,15 @@ jobs:
       - name: Build and run tests
         run: mvn -B clean verify
 
+      - name: SonarQube Cloud Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        run: >
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dsonar.organization=czupson
+          -Dsonar.projectKey="$SONAR_PROJECT_KEY"
+
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
