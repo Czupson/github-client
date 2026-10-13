@@ -66,11 +66,12 @@ jobs:
 
       - name: Scan dependencies for vulnerabilities
         env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: >
           mvn -B
           org.owasp:dependency-check-maven:12.1.0:check
           -Dnvd.api.key="$NVD_API_KEY"
+          -DossindexAnalyzerEnabled=false
           -Dformat=HTML,JSON
           -DfailBuildOnCVSS=11
 
