@@ -1,0 +1,39 @@
+name: GitHub Proxy CI/CD
+
+on:
+  pull_request:
+    branches:
+      - stage
+  push:
+    branches:
+      - stage
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and run tests
+        run: mvn -B clean verify
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-client1-jar
+          path: target/github-client1-0.0.1-SNAPSHOT.jar
+          if-no-files-found: error
+          retention-days: 7
