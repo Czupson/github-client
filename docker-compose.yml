@@ -6,6 +6,7 @@ services:
     container_name: github-client1
     depends_on:
       - db
+      - keycloak
     environment:
       LOGSTASH_HOST: medical-logstash
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/githubdb
@@ -39,6 +40,18 @@ services:
       - "5051:80"
     networks:
       - elk-network
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "8090:8080"
+    networks:
+      - elk-network
+
 networks:
   elk-network:
     external: true
